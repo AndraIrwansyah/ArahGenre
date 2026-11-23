@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RuangCerita — Konsultasi & Ruang Balasan Privat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <!-- Brand -->
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchMainView('public', 'kirim')">
+                <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-sm shadow-teal-600/20">
+                    <i data-lucide="message-circle-heart" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <span class="font-extrabold text-slate-900 tracking-tight text-base sm:text-lg block leading-none">RuangCerita</span>
+                    <span class="text-[11px] font-medium text-teal-700 hidden sm:block mt-0.5">Konsultasi Aman & Privat</span>
+                </div>
+            </div>
+
+            <!-- Public Sub-Navigation -->
+            <nav id="public-nav-pills" class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/70">
+                <button id="nav-kirim-btn" onclick="switchPublicTab('kirim')"
+                    class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-teal-700 shadow-sm">
+                    Kirim Pesan
+                </button>
+                <button id="nav-lacak-btn" onclick="switchPublicTab('lacak')"
+                    class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+                    <span>Cek Balasan</span>
+                </button>
+            </nav>
+
+            <!-- Right Controls: Notification Permission & Counselor Mode -->
+            <div class="flex items-center gap-2">
+                <button id="notif-permission-btn" onclick="requestBrowserNotificationPermission()" title="Aktifkan notifikasi pop-up browser"
+                    class="px-2.5 py-2 rounded-xl border border-slate-200 hover:border-teal-300 bg-white hover:bg-teal-50/50 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <span id="notif-btn-icon-wrap" class="flex items-center">
+                        <i data-lucide="bell-ring" class="w-4 h-4 text-teal-600"></i>
+                    </span>
+                    <span id="notif-btn-text" class="hidden md:inline">Aktifkan Notif</span>
+                </button>
+
+                <button id="admin-toggle-btn" onclick="handleAdminButtonClick()"
+                    class="px-3 py-2 rounded-xl border border-slate-200 hover:border-teal-300 bg-white hover:bg-teal-50/50 text-slate-700 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <span id="admin-btn-icon-wrap" class="flex items-center">
+                        <i data-lucide="lock" class="w-4 h-4 text-teal-600"></i>
+                    </span>
+                    <span id="admin-btn-text">Mode Konselor</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+        <!-- ========================================== -->
+        <!-- TAMPILAN PUBLIK (KIRIM KONSULTASI & LACAK) -->
+        <!-- ========================================== -->
+        <div id="public-view">
+
+            <!-- TAB 1: KIRIM KONSULTASI -->
+            <div id="tab-kirim" class="max-w-2xl mx-auto">
+                <div class="text-center mb-6 sm:mb-8">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-semibold mb-3">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-teal-600"></i>
+                        <span>Ruang Aman • Bisa Anonim atau Identitas Terbatas</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                        Ceritakan Apa yang Sedang Kamu Hadapi
+                    </h1>
+                    <p class="text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
+                        Kirimkan konsultasimu dengan nyaman. Setelah terkirim, kamu akan mendapatkan <strong>Kode Tiket</strong> untuk memantau balasan konselor secara privat.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-8">
+                    <!-- Kotak Sukses Setelah Mengirim -->
+                    <div id="ticket-success-box" class="hidden text-center py-4">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+                        </div>
+                        <h2 class="text-xl font-extrabold text-slate-900 mb-1">Konsultasi Berhasil Terkirim!</h2>
+                        <p class="text-sm text-slate-600 mb-5">
+                            Simpan kode tiket di bawah ini untuk mengecek balasan dari konselor dan melanjutkan diskusi.
+                        </p>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-5 max-w-sm mx-auto">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Kode Tiket Kamu</span>
+                            <div class="flex items-center justify-center gap-2.5">
+                                <span id="generated-ticket-code" class="font-mono text-xl sm:text-2xl font-extrabold text-teal-700 tracking-wider">KONSUL-XXXXX</span>
+                                <button type="button" onclick="copyTicketCode()" class="p-2 rounded-xl bg-white border border-slate-200 hover:bg-teal-50 text-slate-700 hover:text-teal-700 transition" title="Salin Kode">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <button type="button" onclick="openCreatedTicketInTracker()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition shadow-sm flex items-center justify-center gap-2">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <span>Buka Ruang Balasan</span>
+                            </button>
+                            <button type="button" onclick="resetConsultationForm()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition">
+                                Kirim Konsultasi Lain
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Formulir Pengiriman -->
+                    <form id="consultation-form" class="space-y-5">
+                        <!-- Pilihan Privasi -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
+                                Pilihan Privasi Pengirim
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label class="relative flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 cursor-pointer transition bg-slate-50/50 has-[:checked]:bg-teal-50/50 has-[:checked]:border-teal-500">
+                                    <input type="radio" name="privacyMode" value="anonymous" checked onchange="toggleIdentityFields()" class="mt-1 accent-teal-600">
+                                    <div>
+                                        <span class="font-bold text-sm text-slate-900 block">Anonim Penuh</span>
+                                        <span class="text-xs text-slate-500 leading-snug block mt-0.5">Tanpa nama maupun kontak. Percakapan cukup lewat Kode Tiket.</span>
+                                    </div>
+                                </label>
+
+                                <label class="relative flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 cursor-pointer transition bg-slate-50/50 has-[:checked]:bg-teal-50/50 has-[:checked]:border-teal-500">
+                                    <input type="radio" name="privacyMode" value="restricted" onchange="toggleIdentityFields()" class="mt-1 accent-teal-600">
+                                    <div>
+                                        <span class="font-bold text-sm text-slate-900 block">Identitas Terbatas</span>
+                                        <span class="text-xs text-slate-500 leading-snug block mt-0.5">Nama/kontak opsional hanya terlihat oleh konselor di dashboard.</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Field Identitas Terbatas (Tersembunyi saat Anonim) -->
+                        <div id="restricted-identity-fields" class="hidden grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80">
+                            <div>
+                                <label for="sender-name" class="block text-xs font-bold text-amber-900 mb-1.5">Nama / Panggilan (Opsional)</label>
+                                <input type="text" id="sender-name" placeholder="Contoh: Raka atau Kak Rina"
+                                    class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm">
+                            </div>
+                            <div>
+                                <label for="sender-contact" class="block text-xs font-bold text-amber-900 mb-1.5">Kontak Privat (Opsional)</label>
+                                <input type="text" id="sender-contact" placeholder="WA / Email / Username"
+                                    class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Kategori Topik -->
+                        <div>
+                            <label for="topic-category" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                Kategori Topik
+                            </label>
+                            <select id="topic-category" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm font-medium text-slate-800">
+                                <option value="Kesehatan Mental & Emosi">Kesehatan Mental & Emosi</option>
+                                <option value="Pendidikan & Arah Masa Depan">Pendidikan & Arah Masa Depan</option>
+                                <option value="Relasi, Keluarga & Pertemanan">Relasi, Keluarga & Pertemanan</option>
+                                <option value="Pengembangan Diri & GenRE">Pengembangan Diri & GenRE</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <!-- Isi Pesan -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label for="consultation-message" class="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                                    Isi Konsultasi / Cerita
+                                </label>
+                                <span id="char-count" class="text-xs font-medium text-slate-400">0 karakter</span>
+                            </div>
+                            <textarea id="consultation-message" rows="5" required placeholder="Tuliskan ceritamu secara jelas dan nyaman..."
+                                class="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm leading-relaxed"></textarea>
+                        </div>
+
+                        <button id="submit-consultation-btn" type="submit"
+                            class="w-full py-3.5 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-bold text-sm sm:text-base transition shadow-md shadow-teal-600/20 flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                            <span>Kirim Konsultasi Sekarang</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Riwayat Tiket di Sesi Ini -->
+                <div id="session-recent-tickets" class="hidden mt-5 bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">
+                        <i data-lucide="history" class="w-3.5 h-3.5 text-teal-600"></i>
+                        <span>Tiket Dibuat di Perangkat Ini</span>
+                    </div>
+                    <div id="session-tickets-list" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
+            <!-- TAB 2: CEK BALASAN & DISKUSI DUA ARAH -->
+            <div id="tab-lacak" class="hidden max-w-3xl mx-auto">
+                <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 mb-6">
+                    <h2 class="text-xl font-extrabold text-slate-900 mb-1">Cek Balasan & Ruang Diskusi Privat</h2>
+                    <p class="text-sm text-slate-600 mb-4">Masukkan kode tiket yang kamu terima setelah mengirim konsultasi (contoh: <span class="font-mono font-semibold text-teal-700">KONSUL-AB12C</span>).</p>
+
+                    <form id="track-ticket-form" class="flex flex-col sm:flex-row gap-2.5">
+                        <input type="text" id="track-code-input" placeholder="Masukkan Kode Tiket..." required
+                            class="flex-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/40 font-mono uppercase text-sm font-bold tracking-wider">
+                        <button type="submit" class="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition flex items-center justify-center gap-2">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                            <span>Cari Tiket</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Detail Percakapan Tiket User -->
+                <div id="user-ticket-detail" class="hidden bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/60 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2.5 mb-1">
+                                <span id="user-view-ticket-code" class="font-mono font-extrabold text-base sm:text-lg text-slate-900">KONSUL-XXXXX</span>
+                                <span id="user-view-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Menunggu Respon</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                <span id="user-view-category">Kategori: -</span>
+                                <span>•</span>
+                                <span id="user-view-privacy-badge" class="inline-flex items-center gap-1 font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="user-chat-messages" class="p-5 sm:p-6 space-y-4 max-h-[420px] overflow-y-auto custom-scrollbar"></div>
+
+                    <form id="user-reply-form" class="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/40 flex gap-2.5">
+                        <input type="text" id="user-reply-input" placeholder="Tulis pesan lanjutan untuk konselor..." required
+                            class="flex-1 px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm">
+                        <button type="submit" class="px-5 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                            <span class="hidden sm:inline">Balas</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAMPILAN DASHBOARD KONSELOR / ADMIN        -->
+        <!-- ========================================== -->
+        <div id="admin-view" class="hidden space-y-6">
+            <!-- Statistik -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Konsultasi</span>
+                    <span id="stat-total" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm">
+                    <span class="text-xs font-bold uppercase tracking-wider text-amber-600 block mb-1">Menunggu Respon</span>
+                    <span id="stat-pending" class="text-2xl sm:text-3xl font-extrabold text-amber-600">0</span>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 block mb-1">Sudah Dibalas</span>
+                    <span id="stat-replied" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">0</span>
+                </div>
+            </div>
+
+            <!-- Master-Detail Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Daftar Tiket (Kiri) -->
+                <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 space-y-3">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="admin-search-input" oninput="renderAdminTicketList()" placeholder="Cari kode tiket, nama, topik, atau isi pesan..."
+                                class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-xs sm:text-sm">
+                        </div>
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                            <button id="filter-all" onclick="setAdminFilter('all')" class="admin-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white transition shrink-0">Semua</button>
+                            <button id="filter-pending" onclick="setAdminFilter('Menunggu Respon')" class="admin-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition shrink-0">Menunggu</button>
+                            <button id="filter-replied" onclick="setAdminFilter('Sudah Dibalas')" class="admin-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition shrink-0">Dibalas</button>
+                            <button id="filter-done" onclick="setAdminFilter('Selesai')" class="admin-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition shrink-0">Selesai</button>
+                        </div>
+                    </div>
+
+                    <div id="admin-ticket-list" class="divide-y divide-slate-100 max-h-[560px] overflow-y-auto custom-scrollbar"></div>
+                </div>
+
+                <!-- Ruang Detail & Balasan Konselor (Kanan) -->
+                <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden min-h-[520px] flex flex-col">
+                    <div id="admin-empty-detail" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                        <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
+                            <i data-lucide="inbox" class="w-7 h-7"></i>
+                        </div>
+                        <p class="font-semibold text-slate-600 text-sm mb-1">Pilih Tiket Konsultasi</p>
+                        <p class="text-xs max-w-xs">Klik salah satu tiket di daftar sebelah kiri untuk membaca cerita lengkap dan mengirimkan balasan.</p>
+                    </div>
+
+                    <div id="admin-active-detail" class="hidden flex-1 flex-col h-full">
+                        <div class="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/60 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span id="admin-detail-code" class="font-mono font-extrabold text-base sm:text-lg text-slate-900">KONSUL-XXXXX</span>
+                                    <span id="admin-detail-category" class="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">Topik</span>
+                                </div>
+                                <span id="admin-detail-date" class="text-xs text-slate-400">Masuk pada -</span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <select id="admin-status-select" onchange="updateTicketStatus(this.value)"
+                                    class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+                                    <option value="Menunggu Respon">Menunggu Respon</option>
+                                    <option value="Diproses">Diproses</option>
+                                    <option value="Sudah Dibalas">Sudah Dibalas</option>
+                                    <option value="Selesai">Selesai</option>
+                                </select>
+                                <button type="button" onclick="openDeleteModal()" title="Hapus Tiket"
+                                    class="p-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 transition">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Banner Identitas -->
+                        <div class="px-4 sm:px-5 pt-4">
+                            <div id="admin-identity-banner"></div>
+                        </div>
+
+                        <!-- Riwayat Pesan -->
+                        <div id="admin-chat-messages" class="flex-1 p-4 sm:p-5 space-y-4 max-h-[380px] overflow-y-auto custom-scrollbar"></div>
+
+                        <!-- Form Balasan Konselor -->
+                        <form id="admin-reply-form" class="p-4 border-t border-slate-100 bg-slate-50/40 flex gap-2.5">
+                            <input type="text" id="admin-reply-input" placeholder="Tulis balasan empatik untuk pengirim..." required
+                                class="flex-1 px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm">
+                            <button type="submit" class="px-5 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition flex items-center gap-1.5 shadow-sm">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                                <span>Kirim Balasan</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Login PIN Konselor -->
+    <div id="admin-login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-sm w-full p-6 shadow-xl">
+            <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4">
+                <i data-lucide="shield" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-slate-900 mb-1">Masuk Mode Konselor</h3>
+            <p class="text-xs text-slate-500 mb-4">Masukkan PIN konselor untuk membuka dashboard dan membalas konsultasi masuk.</p>
+
+            <form id="admin-login-form" class="space-y-4">
+                <input type="password" id="admin-pin-input" placeholder="Masukkan PIN Konselor" required
+                    class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/40 text-sm font-semibold">
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeAdminModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition">
+                        Masuk
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus Tiket -->
+    <div id="delete-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-sm w-full p-6 shadow-xl">
+            <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-slate-900 mb-1">Hapus Tiket Ini?</h3>
+            <p class="text-xs text-slate-500 mb-5">Seluruh riwayat percakapan pada tiket ini akan dihapus permanen dari database.</p>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                    Batal
+                </button>
+                <button type="button" id="confirm-delete-btn" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition">
+                    Ya, Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // KONFIGURASI SUPABASE (ISI DENGAN MILIKMU)
+        // Dashboard Supabase -> Project Settings -> API
+        // ==========================================
+        const SUPABASE_CONFIG = {
+            url: "https://lmunvkplpltfcpzuebfv.supabase.co",
+            anonKey: "sb_publishable_9HzQPOicDCML0bqUrtmImg_drhxU9G6"
+        };
+
+        const TABLE_NAME = "consultations";
+        const ADMIN_PIN = "PUTRAJATI12345"; // PIN konselor yang diminta
+        const LOCAL_FALLBACK_KEY = "ruangcerita_local_tickets_v1";
+
+        // Pembungkus aman render ikon Lucide agar tidak memblokir eksekusi JS jika CDN lambat/gagal
+        function safeCreateIcons() {
+            try {
+                if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                    window.lucide.createIcons();
+                }
+            } catch (err) {
+                console.warn("Lucide icon warning:", err);
+            }
+        }
+
+        const hasSupabaseConfig = Boolean(
+            SUPABASE_CONFIG.url &&
+            SUPABASE_CONFIG.anonKey &&
+            !SUPABASE_CONFIG.url.startsWith("ISI_") &&
+            !SUPABASE_CONFIG.anonKey.startsWith("ISI_")
+        );
+
+        let supabaseClient = null;
+        try {
+            if (hasSupabaseConfig && window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+            }
+        } catch (err) {
+            console.error("Supabase init error:", err);
+        }
+
+        // State Global Aplikasi
+        let isAdminAuthenticated = false;
+        let allTickets = [];
+        let localTickets = [];
+        let currentTrackedTicketId = null;
+        let currentAdminSelectedTicketId = null;
+        let currentAdminFilter = 'all';
+        let lastCreatedTicketCode = '';
+        let sessionCreatedTickets = [];
+        let isInitialLoadDone = false;
+        let knownTicketMessageCounts = new Map();
+        let pollingIntervalId = null;
+
+        // ==========================================
+        // PENYIMPANAN CADANGAN LOKAL (JIKA SUPABASE BELUM SIAP)
+        // ==========================================
+        function loadLocalTickets() {
+            try {
+                const raw = localStorage.getItem(LOCAL_FALLBACK_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                localTickets = Array.isArray(parsed) ? parsed : [];
+            } catch (err) {
+                console.warn("Gagal membaca penyimpanan lokal:", err);
+                localTickets = [];
+            }
+            return localTickets;
+        }
+
+        function saveLocalTickets() {
+            try {
+                localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(localTickets));
+            } catch (err) {
+                console.warn("Gagal menyimpan ke penyimpanan lokal:", err);
+            }
+        }
+
+        function mergeAndApplyTickets(remoteList) {
+            loadLocalTickets();
+            const mapByIdOrCode = new Map();
+
+            (remoteList || []).forEach(t => {
+                mapByIdOrCode.set(t.ticketCode || t.id, { ...t, _source: 'supabase' });
+            });
+
+            localTickets.forEach(t => {
+                const key = t.ticketCode || t.id;
+                if (!mapByIdOrCode.has(key)) {
+                    mapByIdOrCode.set(key, { ...t, _source: 'local' });
+                }
+            });
+
+            const combined = Array.from(mapByIdOrCode.values()).sort(
+                (a, b) => (Number(b.updatedAt || b.createdAt || 0)) - (Number(a.updatedAt || a.createdAt || 0))
+            );
+
+            combined.forEach(ticket => {
+                const msgCount = (ticket.messages || []).length;
+                const prevCount = knownTicketMessageCounts.get(ticket.id) || 0;
+                const isNewTicket = !knownTicketMessageCounts.has(ticket.id);
+
+                if (isInitialLoadDone && msgCount > prevCount) {
+                    const latestMsg = ticket.messages[msgCount - 1];
+                    if (latestMsg) {
+                        handleIncomingMessageNotification(ticket, latestMsg, isNewTicket);
+                    }
+                }
+
+                knownTicketMessageCounts.set(ticket.id, msgCount);
+            });
+
+            isInitialLoadDone = true;
+            allTickets = combined;
+
+            if (currentTrackedTicketId) {
+                renderUserTicketDetail();
+            }
+            if (isAdminAuthenticated) {
+                updateAdminStats();
+                renderAdminTicketList();
+                if (currentAdminSelectedTicketId) {
+                    renderAdminTicketDetail();
+                }
+            }
+        }
+
+        // ==========================================
+        // 1. SINKRONISASI DATA SUPABASE
+        // ==========================================
+        async function fetchAllConsultations(showConfigWarningIfMissing = false) {
+            if (!supabaseClient) {
+                if (showConfigWarningIfMissing) {
+                    showToast("Konfigurasi Supabase belum aktif. Data tetap bisa diuji di browser lokal.", "info");
+                }
+                mergeAndApplyTickets([]);
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .select('*')
+                    .order('updated_at', { ascending: false });
+
+                if (error) {
+                    console.error("Supabase select error:", error);
+                    mergeAndApplyTickets([]);
+                    return;
+                }
+
+                const normalized = (data || []).map(row => ({
+                    id: row.id,
+                    ticketCode: row.ticket_code,
+                    privacyMode: row.privacy_mode,
+                    senderName: row.sender_name || '',
+                    senderContact: row.sender_contact || '',
+                    category: row.category || 'Lainnya',
+                    status: row.status || 'Menunggu Respon',
+                    createdAt: Number(row.created_at) || 0,
+                    updatedAt: Number(row.updated_at) || 0,
+                    messages: Array.isArray(row.messages) ? row.messages : []
+                }));
+
+                mergeAndApplyTickets(normalized);
+            } catch (err) {
+                console.error("Error fetching consultations:", err);
+                mergeAndApplyTickets([]);
+            }
+        }
+
+        function startRealtimeAndPollingSync() {
+            fetchAllConsultations(true);
+            if (!supabaseClient) return;
+
+            // Langganan Realtime Supabase
+            try {
+                supabaseClient
+                    .channel('consultations-realtime')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, () => {
+                        fetchAllConsultations(false);
+                    })
+                    .subscribe();
+            } catch (e) {
+                console.warn("Realtime channel fallback to polling:", e);
+            }
+
+            // Cadangan sinkronisasi berkala setiap 4 detik
+            if (!pollingIntervalId) {
+                pollingIntervalId = setInterval(() => {
+                    fetchAllConsultations(false);
+                }, 4000);
+            }
+        }
+
+        // ==========================================
+        // 2. FORMULIR PENGIRIM (PUBLIK)
+        // ==========================================
+        window.toggleIdentityFields = function() {
+            const mode = document.querySelector('input[name="privacyMode"]:checked').value;
+            const fieldsBox = document.getElementById('restricted-identity-fields');
+            if (mode === 'restricted') {
+                fieldsBox.classList.remove('hidden');
+                fieldsBox.classList.add('grid');
+            } else {
+                fieldsBox.classList.add('hidden');
+                fieldsBox.classList.remove('grid');
+            }
+        };
+
+        const msgTextarea = document.getElementById('consultation-message');
+        msgTextarea.addEventListener('input', () => {
+            document.getElementById('char-count').textContent = `${msgTextarea.value.length} karakter`;
+        });
+
+        function generateTicketCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let randomPart = '';
+            for (let i = 0; i < 5; i++) {
+                randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return `KONSUL-${randomPart}`;
+        }
+
+        function finishTicketCreation(ticketCode, toastMessage, toastType = "success") {
+            lastCreatedTicketCode = ticketCode;
+            if (!sessionCreatedTickets.includes(ticketCode)) {
+                sessionCreatedTickets.push(ticketCode);
+                renderSessionRecentTickets();
+            }
+
+            document.getElementById('generated-ticket-code').textContent = ticketCode;
+            document.getElementById('consultation-form').classList.add('hidden');
+            document.getElementById('ticket-success-box').classList.remove('hidden');
+            safeCreateIcons();
+            showToast(toastMessage, toastType);
+        }
+
+        document.getElementById('consultation-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-consultation-btn');
+            const privacyMode = document.querySelector('input[name="privacyMode"]:checked').value;
+            const senderName = privacyMode === 'restricted' ? document.getElementById('sender-name').value.trim() : '';
+            const senderContact = privacyMode === 'restricted' ? document.getElementById('sender-contact').value.trim() : '';
+            const category = document.getElementById('topic-category').value;
+            const initialMessage = msgTextarea.value.trim();
+
+            if (!initialMessage) {
+                showToast("Silakan tuliskan isi konsultasi terlebih dahulu.", "error");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Mengirim...</span>`;
+            safeCreateIcons();
+
+            const ticketCode = generateTicketCode();
+            const now = Date.now();
+            const baseTicket = {
+                id: `local-${now}-${Math.random().toString(36).slice(2, 7)}`,
+                ticketCode,
+                privacyMode,
+                senderName: senderName || '',
+                senderContact: senderContact || '',
+                category,
+                status: 'Menunggu Respon',
+                createdAt: now,
+                updatedAt: now,
+                messages: [
+                    {
+                        sender: 'user',
+                        text: initialMessage,
+                        timestamp: now
+                    }
+                ]
+            };
+
+            try {
+                if (!supabaseClient) {
+                    loadLocalTickets();
+                    localTickets.unshift(baseTicket);
+                    saveLocalTickets();
+                    mergeAndApplyTickets([]);
+                    finishTicketCreation(ticketCode, "Konsultasi tersimpan di perangkat lokal (Supabase belum diatur).", "info");
+                    return;
+                }
+
+                const payload = {
+                    ticket_code: ticketCode,
+                    privacy_mode: privacyMode,
+                    sender_name: senderName || '',
+                    sender_contact: senderContact || '',
+                    category,
+                    status: 'Menunggu Respon',
+                    created_at: now,
+                    updated_at: now,
+                    messages: baseTicket.messages
+                };
+
+                const { error } = await supabaseClient.from(TABLE_NAME).insert([payload]);
+                if (error) throw error;
+
+                await fetchAllConsultations(false);
+                finishTicketCreation(ticketCode, "Konsultasi berhasil dikirim ke database!", "success");
+            } catch (error) {
+                console.error("Error submitting consultation:", error);
+                const detailMsg = error?.message || error?.details || error?.hint || "Gagal insert ke tabel consultations";
+
+                // Simpan ke cadangan lokal agar kode tiket tetap keluar & alur bisa langsung dites
+                loadLocalTickets();
+                localTickets.unshift(baseTicket);
+                saveLocalTickets();
+                mergeAndApplyTickets([]);
+                finishTicketCreation(
+                    ticketCode,
+                    `Error Supabase: ${detailMsg}. Tiket tetap dibuat di penyimpanan lokal.`,
+                    "error"
+                );
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="send" class="w-5 h-5"></i><span>Kirim Konsultasi Sekarang</span>`;
+                safeCreateIcons();
+            }
+        });
+
+        window.copyTicketCode = function() {
+            const code = document.getElementById('generated-ticket-code').textContent;
+            navigator.clipboard?.writeText(code).catch(() => {});
+            showToast(`Kode ${code} berhasil disalin!`, "success");
+        };
+
+        window.resetConsultationForm = function() {
+            document.getElementById('consultation-form').reset();
+            toggleIdentityFields();
+            document.getElementById('char-count').textContent = '0 karakter';
+            document.getElementById('ticket-success-box').classList.add('hidden');
+            document.getElementById('consultation-form').classList.remove('hidden');
+        };
+
+        window.openCreatedTicketInTracker = function() {
+            switchPublicTab('lacak');
+            document.getElementById('track-code-input').value = lastCreatedTicketCode;
+            findAndOpenTicketForUser(lastCreatedTicketCode);
+        };
+
+        function renderSessionRecentTickets() {
+            const container = document.getElementById('session-recent-tickets');
+            const list = document.getElementById('session-tickets-list');
+            if (sessionCreatedTickets.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            list.innerHTML = sessionCreatedTickets.map(code => `
+                <button type="button" onclick="quickTrackTicket('${escapeHtml(code)}')"
+                    class="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-mono text-xs font-bold border border-teal-200 transition">
+                    ${escapeHtml(code)}
+                </button>
+            `).join('');
+        }
+
+        window.quickTrackTicket = function(code) {
+            document.getElementById('track-code-input').value = code;
+            findAndOpenTicketForUser(code);
+        };
+
+        // ==========================================
+        // 3. PELACAKAN TIKET & BALASAN PENGIRIM
+        // ==========================================
+        document.getElementById('track-ticket-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('track-code-input').value.trim().toUpperCase();
+            if (!code) return;
+            await fetchAllConsultations(false);
+            findAndOpenTicketForUser(code);
+        });
+
+        window.findAndOpenTicketForUser = function(code) {
+            const found = allTickets.find(t => t.ticketCode && t.ticketCode.toUpperCase() === code.toUpperCase());
+            if (!found) {
+                showToast("Kode tiket tidak ditemukan. Periksa kembali penulisan kodemu.", "error");
+                document.getElementById('user-ticket-detail').classList.add('hidden');
+                currentTrackedTicketId = null;
+                return;
+            }
+            currentTrackedTicketId = found.id;
+            renderUserTicketDetail();
+            document.getElementById('user-ticket-detail').classList.remove('hidden');
+        };
+
+        function renderUserTicketDetail() {
+            const ticket = allTickets.find(t => t.id === currentTrackedTicketId);
+            if (!ticket) return;
+
+            document.getElementById('user-view-ticket-code').textContent = ticket.ticketCode;
+            document.getElementById('user-view-category').textContent = `Kategori: ${ticket.category}`;
+
+            const statusBadge = document.getElementById('user-view-status-badge');
+            statusBadge.textContent = ticket.status;
+            statusBadge.className = `px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusBadgeClass(ticket.status)}`;
+
+            const privacyBadge = document.getElementById('user-view-privacy-badge');
+            if (ticket.privacyMode === 'restricted') {
+                privacyBadge.innerHTML = `<i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-600"></i> Identitas Terbatas (Khusus Konselor)`;
+            } else {
+                privacyBadge.innerHTML = `<i data-lucide="venetian-mask" class="w-3.5 h-3.5 text-teal-600"></i> Anonim Penuh`;
+            }
+
+            const chatContainer = document.getElementById('user-chat-messages');
+            const messages = ticket.messages || [];
+
+            chatContainer.innerHTML = messages.map(msg => {
+                const isUser = msg.sender === 'user';
+                return `
+                    <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'}">
+                        <span class="text-[11px] font-semibold text-slate-400 mb-1 px-1">
+                            ${isUser ? 'Kamu' : 'Konselor RuangCerita'} • ${formatTime(msg.timestamp)}
+                        </span>
+                        <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                            isUser
+                                ? 'bg-teal-600 text-white rounded-br-sm'
+                                : 'bg-slate-100 text-slate-800 border border-slate-200/80 rounded-bl-sm'
+                        }">
+                            ${escapeHtml(msg.text).replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            safeCreateIcons();
+        }
+
+        document.getElementById('user-reply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentTrackedTicketId) return;
+
+            const input = document.getElementById('user-reply-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const ticket = allTickets.find(t => t.id === currentTrackedTicketId);
+            if (!ticket) return;
+
+            const now = Date.now();
+            const nextStatus = ticket.status === 'Selesai' ? 'Menunggu Respon' : ticket.status;
+            const updatedMessages = [
+                ...(ticket.messages || []),
+                { sender: 'user', text, timestamp: now }
+            ];
+
+            try {
+                if (ticket._source === 'local' || !supabaseClient) {
+                    loadLocalTickets();
+                    const idx = localTickets.findIndex(item => item.id === ticket.id || item.ticketCode === ticket.ticketCode);
+                    if (idx !== -1) {
+                        localTickets[idx].messages = updatedMessages;
+                        localTickets[idx].status = nextStatus;
+                        localTickets[idx].updatedAt = now;
+                        saveLocalTickets();
+                    }
+                    input.value = '';
+                    await fetchAllConsultations(false);
+                    showToast("Pesan lanjutan tersimpan.", "success");
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .update({
+                        messages: updatedMessages,
+                        status: nextStatus,
+                        updated_at: now
+                    })
+                    .eq('id', ticket.id);
+
+                if (error) throw error;
+
+                input.value = '';
+                await fetchAllConsultations(false);
+                showToast("Pesan lanjutan terkirim.", "success");
+            } catch (error) {
+                console.error("User reply error:", error);
+                showToast(`Gagal mengirim balasan: ${error?.message || 'Periksa koneksi Supabase'}`, "error");
+            }
+        });
+
+        // ==========================================
+        // 4. DASHBOARD ADMIN / KONSELOR
+        // ==========================================
+        window.handleAdminButtonClick = function() {
+            if (isAdminAuthenticated) {
+                isAdminAuthenticated = false;
+                currentAdminSelectedTicketId = null;
+                updateAdminModeUI();
+                switchMainView('public', 'kirim');
+                showToast("Keluar dari Mode Konselor.", "info");
+            } else {
+                const modal = document.getElementById('admin-login-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('admin-pin-input').focus();
+            }
+        };
+
+        window.closeAdminModal = function() {
+            const modal = document.getElementById('admin-login-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('admin-pin-input').value = '';
+        };
+
+        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pin = document.getElementById('admin-pin-input').value.trim();
+            if (pin === ADMIN_PIN) {
+                isAdminAuthenticated = true;
+                closeAdminModal();
+                updateAdminModeUI();
+                switchMainView('admin');
+                await fetchAllConsultations(true);
+                updateAdminStats();
+                renderAdminTicketList();
+                showToast("Selamat datang di Dashboard Konselor!", "success");
+            } else {
+                showToast("PIN Konselor salah!", "error");
+            }
+        });
+
+        function updateAdminModeUI() {
+            const btn = document.getElementById('admin-toggle-btn');
+            const textEl = document.getElementById('admin-btn-text');
+            const iconWrap = document.getElementById('admin-btn-icon-wrap');
+
+            if (isAdminAuthenticated) {
+                btn.className = "px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm";
+                if (textEl) textEl.textContent = "Keluar Konselor";
+                if (iconWrap) iconWrap.innerHTML = `<i data-lucide="log-out" class="w-4 h-4 text-rose-600"></i>`;
+            } else {
+                btn.className = "px-3 py-2 rounded-xl border border-slate-200 hover:border-teal-300 bg-white hover:bg-teal-50/50 text-slate-700 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm";
+                if (textEl) textEl.textContent = "Mode Konselor";
+                if (iconWrap) iconWrap.innerHTML = `<i data-lucide="lock" class="w-4 h-4 text-teal-600"></i>`;
+            }
+            safeCreateIcons();
+        }
+
+        function updateAdminStats() {
+            document.getElementById('stat-total').textContent = allTickets.length;
+            document.getElementById('stat-pending').textContent = allTickets.filter(t => t.status === 'Menunggu Respon').length;
+            document.getElementById('stat-replied').textContent = allTickets.filter(t => t.status === 'Sudah Dibalas').length;
+        }
+
+        window.setAdminFilter = function(filter) {
+            currentAdminFilter = filter;
+            document.querySelectorAll('.admin-filter-btn').forEach(btn => {
+                btn.className = "admin-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition shrink-0";
+            });
+            const mapId = {
+                'all': 'filter-all',
+                'Menunggu Respon': 'filter-pending',
+                'Sudah Dibalas': 'filter-replied',
+                'Selesai': 'filter-done'
+            };
+            const activeBtn = document.getElementById(mapId[filter]);
+            if (activeBtn) {
+                activeBtn.className = "admin-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white transition shrink-0";
+            }
+            renderAdminTicketList();
+        };
+
+        window.renderAdminTicketList = function() {
+            const listEl = document.getElementById('admin-ticket-list');
+            const query = (document.getElementById('admin-search-input').value || '').toLowerCase();
+
+            const filtered = allTickets.filter(t => {
+                const matchFilter = currentAdminFilter === 'all' || t.status === currentAdminFilter;
+                const firstMsg = (t.messages && t.messages[0] ? t.messages[0].text : '').toLowerCase();
+                const matchSearch = !query ||
+                    (t.ticketCode || '').toLowerCase().includes(query) ||
+                    (t.category || '').toLowerCase().includes(query) ||
+                    (t.senderName || '').toLowerCase().includes(query) ||
+                    firstMsg.includes(query);
+                return matchFilter && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs sm:text-sm">Tidak ada tiket konsultasi yang sesuai.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(ticket => {
+                const isSelected = ticket.id === currentAdminSelectedTicketId;
+                const lastMsg = ticket.messages && ticket.messages.length > 0
+                    ? ticket.messages[ticket.messages.length - 1].text
+                    : '-';
+                const isRestricted = ticket.privacyMode === 'restricted';
+
+                return `
+                    <div onclick="selectAdminTicket('${escapeHtml(ticket.id)}')"
+                        class="p-4 cursor-pointer transition hover:bg-slate-50 ${isSelected ? 'bg-teal-50/60 border-l-4 border-teal-600' : ''}">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-mono font-bold text-xs sm:text-sm text-slate-900">${escapeHtml(ticket.ticketCode)}</span>
+                                ${isRestricted
+                                    ? `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Identitas Ada</span>`
+                                    : `<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">Anonim</span>`
+                                }
+                                ${ticket._source === 'local'
+                                    ? `<span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-[10px] font-bold">Lokal</span>`
+                                    : ''
+                                }
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusBadgeClass(ticket.status)}">
+                                ${escapeHtml(ticket.status)}
+                            </span>
+                        </div>
+                        <div class="text-xs font-semibold text-teal-700 mb-1">${escapeHtml(ticket.category)}</div>
+                        <p class="text-xs text-slate-500 line-clamp-2">${escapeHtml(lastMsg)}</p>
+                        <div class="text-[10px] text-slate-400 mt-2">${formatTime(ticket.updatedAt || ticket.createdAt)}</div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.selectAdminTicket = function(ticketId) {
+            currentAdminSelectedTicketId = ticketId;
+            renderAdminTicketList();
+            renderAdminTicketDetail();
+        };
+
+        function renderAdminTicketDetail() {
+            const ticket = allTickets.find(t => t.id === currentAdminSelectedTicketId);
+            if (!ticket) {
+                document.getElementById('admin-empty-detail').classList.remove('hidden');
+                document.getElementById('admin-active-detail').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('admin-empty-detail').classList.add('hidden');
+            const activePanel = document.getElementById('admin-active-detail');
+            activePanel.classList.remove('hidden');
+            activePanel.classList.add('flex');
+
+            document.getElementById('admin-detail-code').textContent = ticket.ticketCode;
+            document.getElementById('admin-detail-category').textContent = ticket.category;
+            document.getElementById('admin-detail-date').textContent = `Masuk pada ${formatTime(ticket.createdAt)}`;
+            document.getElementById('admin-status-select').value = ticket.status;
+
+            const idBanner = document.getElementById('admin-identity-banner');
+            if (ticket.privacyMode === 'restricted') {
+                const nameDisplay = ticket.senderName ? escapeHtml(ticket.senderName) : '<em class="text-amber-700/70">Tidak diisi</em>';
+                const contactDisplay = ticket.senderContact ? escapeHtml(ticket.senderContact) : '<em class="text-amber-700/70">Tidak diisi</em>';
+                idBanner.className = "rounded-2xl p-3.5 border border-amber-200 bg-amber-50/80 text-amber-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2";
+                idBanner.innerHTML = `
+                    <div class="flex items-center gap-2 font-bold">
+                        <i data-lucide="user-check" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                        <span>Mode Identitas Terbatas (Hanya Terlihat Konselor)</span>
+                    </div>
+                    <div class="flex flex-wrap gap-3 text-xs">
+                        <span><strong>Nama:</strong> ${nameDisplay}</span>
+                        <span><strong>Kontak:</strong> ${contactDisplay}</span>
+                    </div>
+                `;
+            } else {
+                idBanner.className = "rounded-2xl p-3.5 border border-slate-200 bg-white text-slate-600 text-xs flex items-center gap-2";
+                idBanner.innerHTML = `
+                    <i data-lucide="venetian-mask" class="w-4 h-4 text-teal-600 shrink-0"></i>
+                    <span>Pengirim memilih <strong>Anonim Penuh</strong>. Tidak ada nama atau kontak yang dilampirkan.</span>
+                `;
+            }
+
+            const chatBox = document.getElementById('admin-chat-messages');
+            const messages = ticket.messages || [];
+            chatBox.innerHTML = messages.map(msg => {
+                const isAdmin = msg.sender === 'admin';
+                return `
+                    <div class="flex flex-col ${isAdmin ? 'items-end' : 'items-start'}">
+                        <span class="text-[11px] font-semibold text-slate-400 mb-1 px-1">
+                            ${isAdmin ? 'Kamu (Konselor)' : `Pengirim (${escapeHtml(ticket.ticketCode)})`} • ${formatTime(msg.timestamp)}
+                        </span>
+                        <div class="max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                            isAdmin
+                                ? 'bg-teal-600 text-white rounded-br-sm'
+                                : 'bg-slate-100 text-slate-800 border border-slate-200/80 rounded-bl-sm'
+                        }">
+                            ${escapeHtml(msg.text).replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+            safeCreateIcons();
+        }
+
+        document.getElementById('admin-reply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentAdminSelectedTicketId) return;
+
+            const input = document.getElementById('admin-reply-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const ticket = allTickets.find(t => t.id === currentAdminSelectedTicketId);
+            if (!ticket) return;
+
+            const now = Date.now();
+            const updatedMessages = [
+                ...(ticket.messages || []),
+                { sender: 'admin', text, timestamp: now }
+            ];
+
+            try {
+                if (ticket._source === 'local' || !supabaseClient) {
+                    loadLocalTickets();
+                    const idx = localTickets.findIndex(item => item.id === ticket.id || item.ticketCode === ticket.ticketCode);
+                    if (idx !== -1) {
+                        localTickets[idx].messages = updatedMessages;
+                        localTickets[idx].status = 'Sudah Dibalas';
+                        localTickets[idx].updatedAt = now;
+                        saveLocalTickets();
+                    }
+                    input.value = '';
+                    await fetchAllConsultations(false);
+                    showToast("Balasan tersimpan!", "success");
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .update({
+                        messages: updatedMessages,
+                        status: 'Sudah Dibalas',
+                        updated_at: now
+                    })
+                    .eq('id', ticket.id);
+
+                if (error) throw error;
+
+                input.value = '';
+                await fetchAllConsultations(false);
+                showToast("Balasan terkirim ke pengirim!", "success");
+            } catch (error) {
+                console.error("Admin reply error:", error);
+                showToast(`Gagal mengirim balasan: ${error?.message || 'Periksa koneksi Supabase'}`, "error");
+            }
+        });
+
+        window.updateTicketStatus = async function(newStatus) {
+            if (!currentAdminSelectedTicketId) return;
+            const ticket = allTickets.find(t => t.id === currentAdminSelectedTicketId);
+            if (!ticket) return;
+
+            const now = Date.now();
+            try {
+                if (ticket._source === 'local' || !supabaseClient) {
+                    loadLocalTickets();
+                    const idx = localTickets.findIndex(item => item.id === ticket.id || item.ticketCode === ticket.ticketCode);
+                    if (idx !== -1) {
+                        localTickets[idx].status = newStatus;
+                        localTickets[idx].updatedAt = now;
+                        saveLocalTickets();
+                    }
+                    await fetchAllConsultations(false);
+                    showToast(`Status diubah menjadi "${newStatus}".`, "success");
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .update({
+                        status: newStatus,
+                        updated_at: now
+                    })
+                    .eq('id', ticket.id);
+
+                if (error) throw error;
+                await fetchAllConsultations(false);
+                showToast(`Status diubah menjadi "${newStatus}".`, "success");
+            } catch (error) {
+                console.error("Status update error:", error);
+                showToast(`Gagal memperbarui status: ${error?.message || 'Periksa koneksi Supabase'}`, "error");
+            }
+        };
+
+        window.openDeleteModal = function() {
+            if (!currentAdminSelectedTicketId) return;
+            const modal = document.getElementById('delete-confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeDeleteModal = function() {
+            const modal = document.getElementById('delete-confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            if (!currentAdminSelectedTicketId) return;
+            const ticket = allTickets.find(t => t.id === currentAdminSelectedTicketId);
+            if (!ticket) return;
+
+            try {
+                if (ticket._source === 'local' || !supabaseClient) {
+                    loadLocalTickets();
+                    localTickets = localTickets.filter(item => item.id !== ticket.id && item.ticketCode !== ticket.ticketCode);
+                    saveLocalTickets();
+                    currentAdminSelectedTicketId = null;
+                    closeDeleteModal();
+                    await fetchAllConsultations(false);
+                    renderAdminTicketDetail();
+                    showToast("Tiket konsultasi dihapus.", "info");
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .delete()
+                    .eq('id', ticket.id);
+
+                if (error) throw error;
+
+                currentAdminSelectedTicketId = null;
+                closeDeleteModal();
+                await fetchAllConsultations(false);
+                renderAdminTicketDetail();
+                showToast("Tiket konsultasi dihapus.", "info");
+            } catch (error) {
+                console.error("Delete error:", error);
+                showToast(`Gagal menghapus tiket: ${error?.message || 'Periksa koneksi Supabase'}`, "error");
+            }
+        });
+
+        // ==========================================
+        // 5. NAVIGASI & UTILITAS
+        // ==========================================
+        window.switchMainView = function(view, subTab = 'kirim') {
+            const publicView = document.getElementById('public-view');
+            const adminView = document.getElementById('admin-view');
+            const navPills = document.getElementById('public-nav-pills');
+
+            if (view === 'admin' && isAdminAuthenticated) {
+                publicView.classList.add('hidden');
+                navPills.classList.add('hidden');
+                adminView.classList.remove('hidden');
+            } else {
+                adminView.classList.add('hidden');
+                publicView.classList.remove('hidden');
+                navPills.classList.remove('hidden');
+                switchPublicTab(subTab);
+            }
+        };
+
+        window.switchPublicTab = function(tab) {
+            const tabKirim = document.getElementById('tab-kirim');
+            const tabLacak = document.getElementById('tab-lacak');
+            const btnKirim = document.getElementById('nav-kirim-btn');
+            const btnLacak = document.getElementById('nav-lacak-btn');
+
+            if (tab === 'lacak') {
+                tabKirim.classList.add('hidden');
+                tabLacak.classList.remove('hidden');
+                btnLacak.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-teal-700 shadow-sm flex items-center gap-1.5";
+                btnKirim.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900";
+            } else {
+                tabLacak.classList.add('hidden');
+                tabKirim.classList.remove('hidden');
+                btnKirim.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-teal-700 shadow-sm";
+                btnLacak.className = "px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
+            }
+        };
+
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'Menunggu Respon': return 'bg-amber-100 text-amber-800';
+                case 'Diproses': return 'bg-sky-100 text-sky-800';
+                case 'Sudah Dibalas': return 'bg-emerald-100 text-emerald-800';
+                case 'Selesai': return 'bg-slate-200 text-slate-700';
+                default: return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        function formatTime(ts) {
+            if (!ts) return '-';
+            return new Date(ts).toLocaleString('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const styles = {
+                success: 'bg-slate-900 text-white border-teal-500',
+                error: 'bg-rose-600 text-white border-rose-400',
+                info: 'bg-slate-800 text-white border-slate-600'
+            };
+            const icons = {
+                success: 'check-circle',
+                error: 'alert-circle',
+                info: 'info'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-xl border-l-4 ${styles[type] || styles.info} text-xs sm:text-sm font-medium transform transition-all duration-300`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || 'info'}" class="w-5 h-5 shrink-0 text-teal-400"></i>
+                <span class="leading-snug">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            safeCreateIcons();
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4200);
+        };
+
+        // ==========================================
+        // 6. NOTIFIKASI POP-UP BROWSER & SUARA
+        // ==========================================
+        function playNotificationChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(660, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.14);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.35);
+            } catch (e) {}
+        }
+
+        window.requestBrowserNotificationPermission = async function() {
+            if (!("Notification" in window)) {
+                showToast("Browser kamu tidak mendukung notifikasi pop-up.", "error");
+                return;
+            }
+            if (Notification.permission === "granted") {
+                updateNotificationButtonUI();
+                showToast("Notifikasi pop-up browser sudah aktif!", "success");
+                return;
+            }
+            if (Notification.permission === "denied") {
+                showToast("Izin notifikasi diblokir browser. Aktifkan lewat ikon gembok di bilah alamat.", "error");
+                return;
+            }
+            const permission = await Notification.requestPermission();
+            updateNotificationButtonUI();
+            if (permission === "granted") {
+                playNotificationChime();
+                showToast("Notifikasi pop-up browser berhasil diaktifkan!", "success");
+            } else {
+                showToast("Izin notifikasi tidak diberikan.", "info");
+            }
+        };
+
+        function updateNotificationButtonUI() {
+            const btn = document.getElementById('notif-permission-btn');
+            const textEl = document.getElementById('notif-btn-text');
+            const iconWrap = document.getElementById('notif-btn-icon-wrap');
+            if (!btn || !("Notification" in window)) return;
+
+            if (Notification.permission === "granted") {
+                btn.className = "px-2.5 py-2 rounded-xl border border-teal-200 bg-teal-50/70 text-teal-800 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm";
+                if (textEl) textEl.textContent = "Notif Aktif";
+                if (iconWrap) iconWrap.innerHTML = `<i data-lucide="bell" class="w-4 h-4 text-teal-600"></i>`;
+            } else if (Notification.permission === "denied") {
+                btn.className = "px-2.5 py-2 rounded-xl border border-rose-200 bg-rose-50/70 text-rose-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm";
+                if (textEl) textEl.textContent = "Notif Diblokir";
+                if (iconWrap) iconWrap.innerHTML = `<i data-lucide="bell-off" class="w-4 h-4 text-rose-600"></i>`;
+            }
+            safeCreateIcons();
+        }
+
+        function handleIncomingMessageNotification(ticket, latestMsg, isNewTicket) {
+            const previewText = latestMsg.text.length > 75
+                ? latestMsg.text.substring(0, 75) + "..."
+                : latestMsg.text;
+
+            if (isAdminAuthenticated && latestMsg.sender === 'user') {
+                const title = isNewTicket
+                    ? `Konsultasi Baru (${ticket.ticketCode})`
+                    : `Balasan Baru dari ${ticket.ticketCode}`;
+                const body = `[${ticket.category}] ${previewText}`;
+
+                playNotificationChime();
+                showToast(`${title}: ${previewText}`, "info");
+                triggerSystemPopupNotification(title, body, () => {
+                    window.focus();
+                    switchMainView('admin');
+                    selectAdminTicket(ticket.id);
+                });
+                return;
+            }
+
+            const isUserOwnedTicket = ticket.id === currentTrackedTicketId || sessionCreatedTickets.includes(ticket.ticketCode);
+            if (!isAdminAuthenticated && latestMsg.sender === 'admin' && isUserOwnedTicket) {
+                const title = `Balasan Konselor (${ticket.ticketCode})`;
+                const body = previewText;
+
+                playNotificationChime();
+                showToast(`Konselor membalas tiket ${ticket.ticketCode}!`, "success");
+                triggerSystemPopupNotification(title, body, () => {
+                    window.focus();
+                    switchMainView('public', 'lacak');
+                    document.getElementById('track-code-input').value = ticket.ticketCode;
+                    findAndOpenTicketForUser(ticket.ticketCode);
+                });
+            }
+        }
+
+        function triggerSystemPopupNotification(title, body, onClickCallback) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+            try {
+                const notif = new Notification(title, {
+                    body: body,
+                    tag: title
+                });
+
+                notif.onclick = function() {
+                    if (typeof onClickCallback === 'function') {
+                        onClickCallback();
+                    }
+                    notif.close();
+                };
+            } catch (err) {
+                console.error("Gagal menampilkan pop-up notifikasi:", err);
+            }
+        }
+
+        window.onload = () => {
+            safeCreateIcons();
+            updateNotificationButtonUI();
+            startRealtimeAndPollingSync();
+        };
+    </script>
+</body>
+</html>
